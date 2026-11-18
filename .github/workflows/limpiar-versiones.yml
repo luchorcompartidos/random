@@ -1,0 +1,41 @@
+name: Limpieza única de versiones
+
+# Flujo de un solo uso: borra v0.1 y v0.1.1 (creadas por la plantilla vieja),
+# crea v0.0.1 sobre el commit de la primera versión y se borra a sí mismo.
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/limpiar-versiones.yml']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  limpiar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Rehacer versiones y quitar este flujo
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for t in v0.1.1 v0.1; do
+            gh release delete "$t" --yes --cleanup-tag || git push origin ":refs/tags/$t" || true
+            git tag -d "$t" 2>/dev/null || true
+          done
+          git tag v0.0.1 c88b1c2b98844b7d0cf35f1d6fa520451d65f02a
+          git push origin v0.0.1
+          gh release create v0.0.1 --verify-tag --title v0.0.1 \
+            --notes "Primera versión de Random: subconjuntos con pesos y etiquetas, reglas (excluir, considerar solo, cambiar peso), chances antes de sortear, historial y exportar/importar."
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -q .github/workflows/limpiar-versiones.yml
+          git commit -m "Quitar flujo de limpieza de versiones [skip release]"
+          git push origin HEAD:main
