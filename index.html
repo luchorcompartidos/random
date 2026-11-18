@@ -1,19 +1,658 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Prueba deploy</title>
-  <style>
-    body { font-family: system-ui, sans-serif; display: grid; place-items: center; min-height: 100vh; margin: 0; background: #eef4ff; color: #1a2b4c; }
-    .card { text-align: center; padding: 2rem 3rem; background: #fff; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,.08); }
-    h1 { margin: 0 0 .5rem; font-size: 2.5rem; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="app-version" content="v0.0.1">
+<meta name="theme-color" content="#4f46e5">
+<title>Random · Selecciones aleatorias</title>
+<style>
+  :root{--bg:#f4f5f9;--card:#fff;--tx:#1c1f26;--mut:#6b7280;--bd:#e3e6ec;--ac:#4f46e5;--ac2:#eef2ff;--bad:#dc2626;--r:14px}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{position:sticky;top:0;z-index:50;background:var(--card);border-bottom:1px solid var(--bd)}
+  .hd{display:flex;align-items:center;gap:10px;max-width:760px;margin:0 auto;padding:10px 14px 6px}
+  .hd h1{margin:0;font-size:20px}
+  .sp{flex:1}
+  nav{display:flex;max-width:760px;margin:0 auto;padding:0 8px}
+  nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;white-space:nowrap;border:0;background:none;padding:6px 2px 8px;font:600 13px system-ui,sans-serif;color:var(--mut);border-bottom:3px solid transparent;cursor:pointer}
+  nav button.on{color:var(--ac);border-bottom-color:var(--ac)}
+  main{max-width:760px;margin:0 auto;padding:14px 12px 80px}
+  .card{background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:12px}
+  h2{font-size:16px;margin:0 0 8px}
+  h3{font-size:14px;margin:12px 0 6px;color:var(--mut);text-transform:uppercase;letter-spacing:.03em}
+  .mut{color:var(--mut)} .sm{font-size:13px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .bar-top{margin-bottom:12px}
+  .btn{border:1px solid #c9ced6;border-radius:10px;padding:8px 13px;background:#fff;color:var(--tx);font:14px system-ui,sans-serif;cursor:pointer}
+  .btn.pri{background:var(--ac);border-color:var(--ac);color:#fff}
+  .btn.big{width:100%;padding:14px;font-size:18px;font-weight:700;margin:10px 0 6px}
+  .btn.danger{color:var(--bad);border-color:#f3c4c4}
+  .ic{border:0;background:none;font-size:16px;padding:6px;cursor:pointer;color:var(--mut);border-radius:8px;line-height:1}
+  .ic:hover{background:var(--bg)}
+  input,select,textarea{font:15px system-ui,sans-serif;color:var(--tx);border:1px solid var(--bd);border-radius:9px;padding:7px 9px;background:#fff;min-width:0}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--ac2);border-color:var(--ac)}
+  input[type=checkbox]{width:20px;height:20px;accent-color:var(--ac);flex:none;margin:0}
+  label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mut)}
+  label input,label select{color:var(--tx)}
+  label.chk{flex-direction:row;align-items:center;gap:8px;font-size:14px;color:var(--tx);margin-top:10px}
+  .cfg{display:grid;grid-template-columns:110px minmax(0,1fr);gap:10px}
+  .cfg label{min-width:0}.cfg select,.cfg input{width:100%}
+  /* Resultado */
+  .picks{display:flex;flex-wrap:wrap;gap:8px}
+  .pick{display:inline-flex;flex-direction:column;background:var(--ac2);color:#312e81;border-radius:12px;padding:10px 14px;font-size:20px;font-weight:700}
+  .pick small{font-size:12px;font-weight:500;color:var(--mut)}
+  .res{border-color:#c7d2fe}
+  .res.spin .pick{opacity:.55}
+  /* Chances */
+  table.ch{width:100%;border-collapse:collapse}
+  table.ch td{padding:6px 4px;border-top:1px solid var(--bd);vertical-align:middle}
+  table.ch td small{display:block;color:var(--mut);font-size:12px}
+  td.bar{width:34%}
+  td.bar i{display:block;height:8px;border-radius:9px;background:var(--ac);min-width:2px}
+  td.pc{width:56px;text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+  .tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:9px;background:#fef3c7;color:#92400e;margin-left:6px}
+  details{margin-top:10px} summary{cursor:pointer;color:var(--mut);font-size:14px}
+  ul.ex{margin:6px 0 0;padding-left:18px;font-size:14px}
+  ul.ex small{color:var(--mut)}
+  /* Subconjuntos */
+  .gh{display:flex;align-items:center;gap:6px}
+  .gname{flex:1;font-weight:700;font-size:16px}
+  .wt{flex-direction:row;align-items:center;gap:2px;font-size:14px;color:var(--mut)}
+  .wt input{width:62px;text-align:center}
+  .items{margin-top:8px}
+  .it{display:grid;grid-template-columns:auto 1fr auto auto;gap:6px;align-items:center;padding:8px 0;border-top:1px solid var(--bd)}
+  .it .itags{grid-column:2 / 5;font-size:13px;padding:5px 8px;color:var(--mut)}
+  .off .gname,.it.off .iname,.it.off .itags,.grp.off .items{opacity:.45}
+  .grp.off{background:#fafafa}
+  /* Reglas */
+  .rule{display:flex;align-items:center;gap:8px;padding:9px 0;border-top:1px solid var(--bd)}
+  .rule .rt{flex:1}
+  .rule.off .rt{opacity:.45;text-decoration:line-through}
+  /* Historial */
+  .hrow{display:flex;gap:8px;align-items:flex-start;justify-content:space-between;padding:9px 0;border-top:1px solid var(--bd)}
+  /* Diálogo */
+  .dlg{border:1px solid var(--bd);border-radius:16px;padding:18px;width:min(520px,94vw);color:var(--tx)}
+  .dlg::backdrop{background:rgba(15,23,42,.35)}
+  .dlg h3{margin:0 0 12px;color:var(--tx);text-transform:none;font-size:17px;letter-spacing:0}
+  .dlg label{margin-bottom:10px}
+  .dlg textarea{width:100%;min-height:170px;font-size:14px}
+  .dlg .acts{justify-content:flex-end}
+  .menu .btn{width:100%;text-align:left;margin-bottom:8px}
+  #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:#1c1f26;color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:9999;max-width:90vw;text-align:center}
+  #toast.on{opacity:1;transform:translateX(-50%)}
+  @media (max-width:420px){ nav button{font-size:12px} .cfg{grid-template-columns:84px minmax(0,1fr)} }
+</style>
 </head>
 <body>
-  <div class="card">
-    <h1>Versión 0.2</h1>
-    <p>Página de prueba de deploy en GitHub Pages.</p>
+<header>
+  <div class="hd">
+    <h1>🎲 Random</h1>
+    <button id="verBtn" class="vs-ver" type="button">v—</button>
+    <span class="sp"></span>
+    <button class="ic" id="menuBtn" type="button" title="Más opciones">⋯</button>
   </div>
+  <nav id="tabs"></nav>
+</header>
+<main id="main"></main>
+<dialog class="dlg" id="dlg"></dialog>
+<div id="toast" role="status"></div>
+<input type="file" id="fileIn" accept=".json,application/json" hidden>
+
+<script>
+(function(){
+  "use strict";
+  const KEY = "random_app_v1";
+  const $ = (s, el=document) => el.querySelector(s);
+  const main = $("#main");
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const norm = s => String(s || "").trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const uid = () => Math.random().toString(36).slice(2, 10);
+  const num = (v, d = 1) => { const n = parseFloat(String(v).replace(",", ".")); return isFinite(n) && n >= 0 ? n : d; };
+  const fmtN = n => String(Math.round(n * 100) / 100).replace(".", ",");
+  const fmtD = t => new Date(t).toLocaleString("es-AR", {day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit"});
+  const pct = p => p >= 0.9995 ? "100%" : p > 0 && p < 0.001 ? "<0,1%" : (p * 100).toFixed(p < 0.1 ? 1 : 0).replace(".", ",") + "%";
+  const mkI = (name, weight = 1, tags = []) => ({id: uid(), name, weight, tags, active: true});
+
+  // ---------- Datos ----------
+  function ejemplo(){
+    return {
+      groups: [
+        {id: uid(), name: "Cenas", active: true, weight: 1, items: [
+          mkI("Pizza", 1, ["rápida"]), mkI("Milanesas con puré", 2, ["casera"]), mkI("Sushi", 1, ["salida"]),
+          mkI("Guiso de lentejas", 1, ["casera", "invierno"]), mkI("Hamburguesas", 1, ["rápida"]), mkI("Empanadas", 1, ["rápida", "casera"])]},
+        {id: uid(), name: "Planes del finde", active: true, weight: 1, items: [
+          mkI("Parque", 1, ["aire libre"]), mkI("Cine", 1, ["salida"]), mkI("Museo", 1, ["salida"]),
+          mkI("Juegos de mesa", 1, ["casa"]), mkI("Bici", 1, ["aire libre"])]}
+      ],
+      rules: [
+        {id: uid(), active: true, type: "excluir", tk: "hist", tv: "", n: 2, factor: 1},
+        {id: uid(), active: true, type: "peso", tk: "tag", tv: "casera", n: 3, factor: 2}
+      ],
+      cfg: {count: 1, mode: "grupo", replace: false},
+      history: [], tab: "sortear"
+    };
+  }
+  function normalizar(d){
+    if(!d || !Array.isArray(d.groups)) return null;
+    d.groups.forEach(g => { g.id = g.id || uid(); g.items = Array.isArray(g.items) ? g.items : []; g.active = g.active !== false; g.weight = num(g.weight, 1);
+      g.items.forEach(it => { it.id = it.id || uid(); it.tags = Array.isArray(it.tags) ? it.tags : []; it.active = it.active !== false; it.weight = num(it.weight, 1); }); });
+    d.rules = Array.isArray(d.rules) ? d.rules : [];
+    d.history = Array.isArray(d.history) ? d.history : [];
+    d.cfg = Object.assign({count: 1, mode: "global", replace: false}, d.cfg || {});
+    d.tab = d.tab || "sortear";
+    return d;
+  }
+  let S = null;
+  try{ S = normalizar(JSON.parse(localStorage.getItem(KEY))); }catch(e){}
+  if(!S) S = ejemplo();
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast("No se pudo guardar en este navegador"); } }
+  const cnt = () => Math.max(1, Math.min(999, parseInt(S.cfg.count) || 1));
+  const allTags = () => [...new Set(S.groups.flatMap(g => g.items.flatMap(i => i.tags || [])).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"));
+
+  // ---------- Reglas ----------
+  function contexto(){
+    const ever = new Set(), memo = {};
+    S.history.forEach(h => h.picks.forEach(p => ever.add(p.id)));
+    return { ever, recent: n => memo[n] || (memo[n] = new Set(S.history.slice(0, Math.max(0, n | 0)).flatMap(h => h.picks.map(p => p.id)))) };
+  }
+  function coincide(r, it, g, c){
+    const v = norm(r.tv);
+    switch(r.tk){
+      case "tag":   return !!v && (it.tags || []).some(t => norm(t) === v);
+      case "group": return g.id === r.tv;
+      case "text":  return !!v && norm(it.name).includes(v);
+      case "hist":  return c.recent(r.n).has(it.id);
+      case "nunca": return !c.ever.has(it.id);
+    }
+    return false;
+  }
+  function objetivo(r){
+    switch(r.tk){
+      case "tag":   return `ítems con etiqueta «${r.tv}»`;
+      case "group": { const g = S.groups.find(x => x.id === r.tv); return `el subconjunto «${g ? (g.name || "sin nombre") : "(borrado)"}»`; }
+      case "text":  return `ítems cuyo nombre contiene «${r.tv}»`;
+      case "hist":  return (r.n | 0) === 1 ? "ítems que salieron en la última ronda" : `ítems que salieron en las últimas ${r.n | 0} rondas`;
+      case "nunca": return "ítems que nunca salieron";
+    }
+    return "";
+  }
+  function textoRegla(r){
+    const t = objetivo(r);
+    return r.type === "excluir" ? "Excluir " + t : r.type === "solo" ? "Considerar solo " + t : `Peso ×${fmtN(num(r.factor))} a ${t}`;
+  }
+  // Evalúa todos los ítems: si participan, por qué no, y su peso final (ítem × subconjunto × reglas)
+  function evaluar(){
+    const c = contexto(), act = S.rules.filter(r => r.active), solos = act.filter(r => r.type === "solo"), rows = [];
+    for(const g of S.groups) for(const it of g.items){
+      if(!String(it.name || "").trim()) continue;
+      const row = {it, g, w: num(it.weight) * num(g.weight), notes: [], why: ""};
+      if(!g.active) row.why = "Subconjunto desactivado";
+      else if(!it.active) row.why = "Ítem desactivado";
+      else{
+        if(solos.length && !solos.some(r => coincide(r, it, g, c))) row.why = "No entra en: " + solos.map(textoRegla).join(" / ");
+        if(!row.why){ const ex = act.find(r => r.type === "excluir" && coincide(r, it, g, c)); if(ex) row.why = textoRegla(ex); }
+        if(!row.why){
+          for(const r of act) if(r.type === "peso" && coincide(r, it, g, c)){ row.w *= num(r.factor); row.notes.push("×" + fmtN(num(r.factor))); }
+          if(row.w <= 0) row.why = "Peso 0";
+        }
+      }
+      row.ok = !row.why; rows.push(row);
+    }
+    return rows;
+  }
+  function secciones(rows){
+    if(S.cfg.mode === "grupo") return S.groups.filter(g => g.active).map(g => ({g, rows: rows.filter(r => r.ok && r.g === g)}));
+    return [{g: null, rows: rows.filter(r => r.ok)}];
+  }
+
+  // ---------- Sorteo ----------
+  function rndCripto(){ const a = new Uint32Array(1); crypto.getRandomValues(a); return (a[0] + 1) / 4294967297; }
+  const rndRapido = () => 1 - Math.random(); // (0,1], solo para estimar chances
+  // Sin reposición: método de Efraimidis–Spirakis (clave u^(1/peso), se quedan las k más altas)
+  function elegir(rows, k, rep, rnd = rndCripto){
+    if(!rows.length) return [];
+    if(rep){
+      const tot = rows.reduce((a, r) => a + r.w, 0), out = [];
+      for(let i = 0; i < k; i++){ let x = rnd() * tot, ch = rows[rows.length - 1]; for(const r of rows){ x -= r.w; if(x <= 0){ ch = r; break; } } out.push(ch); }
+      return out;
+    }
+    return rows.map(r => ({r, key: Math.log(rnd()) / r.w})).sort((a, b) => b.key - a.key).slice(0, k).map(x => x.r);
+  }
+  function chances(rows, k, rep){
+    const n = rows.length, tot = rows.reduce((a, r) => a + r.w, 0), m = new Map();
+    if(!n) return m;
+    if(rep) rows.forEach(r => m.set(r, 1 - Math.pow(1 - r.w / tot, k)));
+    else if(k >= n) rows.forEach(r => m.set(r, 1));
+    else if(k === 1) rows.forEach(r => m.set(r, r.w / tot));
+    else{
+      const sims = Math.max(400, Math.min(4000, Math.floor(300000 / n))), c = new Map(rows.map(r => [r, 0]));
+      for(let s = 0; s < sims; s++) for(const r of elegir(rows, k, false, rndRapido)) c.set(r, c.get(r) + 1);
+      rows.forEach(r => m.set(r, c.get(r) / sims));
+    }
+    return m;
+  }
+  function sortear(){
+    const rows = evaluar(), k = cnt();
+    const secs = secciones(rows).map(s => ({g: s.g ? s.g.name : null, items: elegir(s.rows, k, S.cfg.replace).map(r => ({id: r.it.id, name: r.it.name, g: r.g.name}))}));
+    if(!secs.some(s => s.items.length)){ toast("No hay ítems elegibles con las reglas actuales"); return; }
+    const pool = rows.filter(r => r.ok).map(r => r.it.name);
+    const h = {id: uid(), at: Date.now(), mode: S.cfg.mode, secs, picks: secs.flatMap(s => s.items)};
+    S.history.unshift(h); if(S.history.length > 500) S.history.length = 500;
+    save();
+    if(S.tab !== "sortear"){ S.tab = "sortear"; render(); }
+    animar(pool);
+  }
+  function animar(pool){
+    renderSortear(true);
+    const slots = main.querySelectorAll("#resBox .pick b");
+    let t = 0;
+    const iv = setInterval(() => {
+      slots.forEach(s => s.textContent = pool[Math.floor(Math.random() * pool.length)] || "…");
+      if(++t > 11){ clearInterval(iv); renderSortear(); if(navigator.vibrate) try{ navigator.vibrate(30); }catch(e){} }
+    }, 65);
+  }
+  function textoResultado(h){
+    return h.secs.map(s => (s.g ? s.g + ": " : "") + (s.items.map(p => p.name).join(", ") || "—")).join("\n");
+  }
+
+  // ---------- Vistas ----------
+  const TABS = [["sortear", "🎲", "Sortear"], ["grupos", "📦", "Subconjuntos"], ["reglas", "⚖️", "Reglas"], ["hist", "🕘", "Historial"]];
+  function render(){
+    $("#tabs").innerHTML = TABS.map(([id, ic, t]) => `<button type="button" data-tab="${id}" class="${S.tab === id ? "on" : ""}"><span>${ic}</span>${t}</button>`).join("");
+    ({sortear: renderSortear, grupos: renderGrupos, reglas: renderReglas, hist: renderHist}[S.tab] || renderSortear)();
+  }
+  function tarjetaResultado(h, girando){
+    return `<section class="card res ${girando ? "spin" : ""}" id="resBox">
+      <div class="row"><h2>Resultado</h2><span class="mut sm">${fmtD(h.at)}</span></div>
+      ${h.secs.map(s => `${s.g ? `<h3>${esc(s.g)}</h3>` : ""}<div class="picks">${s.items.length
+        ? s.items.map(p => `<span class="pick"><b>${esc(p.name)}</b>${s.g ? "" : `<small>${esc(p.g)}</small>`}</span>`).join("")
+        : '<span class="mut">Sin ítems elegibles</span>'}</div>`).join("")}
+      <div class="acts"><button class="btn" type="button" data-act="copiar">📋 Copiar</button><button class="btn" type="button" data-act="sortear">↻ Otra vez</button></div>
+    </section>`;
+  }
+  function renderSortear(girando){
+    const rows = evaluar(), ok = rows.filter(r => r.ok).length, act = S.rules.filter(r => r.active).length, last = S.history[0];
+    main.innerHTML = `<section class="card">
+      <div class="cfg">
+        <label>Cantidad<input type="number" min="1" max="999" step="1" inputmode="numeric" data-f="cfg.count" value="${cnt()}"></label>
+        <label>Sacar<select data-f="cfg.mode">
+          <option value="global" ${S.cfg.mode !== "grupo" ? "selected" : ""}>del total (todos juntos)</option>
+          <option value="grupo" ${S.cfg.mode === "grupo" ? "selected" : ""}>de cada subconjunto</option></select></label>
+      </div>
+      <label class="chk"><input type="checkbox" data-f="cfg.replace" ${S.cfg.replace ? "checked" : ""}> Permitir que un ítem salga más de una vez en la misma ronda</label>
+      <button class="btn pri big" type="button" data-act="sortear">🎲 Sortear</button>
+      <p class="mut sm" style="margin:0">Elegibles: <b>${ok}</b> de ${rows.length} ítems · Reglas activas: <b>${act}</b> · <a href="#" data-act="irReglas">ver reglas</a></p>
+    </section>
+    ${last ? tarjetaResultado(last, girando) : ""}
+    <section class="card"><h2>Chances en la próxima ronda</h2><div id="chancesBox"></div></section>`;
+    renderChances();
+  }
+  function renderChances(){
+    const box = $("#chancesBox"); if(!box) return;
+    const rows = evaluar(), k = cnt();
+    let html = "";
+    for(const s of secciones(rows)){
+      const m = chances(s.rows, k, S.cfg.replace), list = [...s.rows].sort((a, b) => m.get(b) - m.get(a));
+      html += (s.g ? `<h3>${esc(s.g.name || "Sin nombre")}</h3>` : "") + (list.length
+        ? `<table class="ch"><tbody>${list.map(r => { const p = m.get(r); return `<tr>
+            <td>${esc(r.it.name)}${r.notes.length ? `<span class="tag" title="Reglas de peso aplicadas">${r.notes.join(" ")}</span>` : ""}${s.g ? "" : `<small>${esc(r.g.name)}</small>`}</td>
+            <td class="bar"><i style="width:${(p * 100).toFixed(1)}%"></i></td><td class="pc">${pct(p)}</td></tr>`; }).join("")}</tbody></table>`
+        : '<p class="mut sm">Ningún ítem elegible.</p>');
+    }
+    const ex = rows.filter(r => !r.ok);
+    if(ex.length) html += `<details><summary>Excluidos de esta ronda (${ex.length})</summary><ul class="ex">${ex.map(r =>
+      `<li><b>${esc(r.it.name)}</b> <small>${esc(r.g.name)}</small> — <span class="mut">${esc(r.why)}</span></li>`).join("")}</ul></details>`;
+    if(!S.cfg.replace && k > 1) html += `<p class="mut sm">Con más de un ítem por ronda, las chances se estiman por simulación.</p>`;
+    if(S.cfg.replace && k > 1) html += `<p class="mut sm">Chance de salir al menos una vez.</p>`;
+    box.innerHTML = html || '<p class="mut sm">Agregá ítems en Subconjuntos.</p>';
+  }
+  function filaItem(g, it){
+    return `<div class="it ${it.active ? "" : "off"}">
+      <input type="checkbox" title="Considerar este ítem" data-f="i.active" data-g="${g.id}" data-i="${it.id}" ${it.active ? "checked" : ""}>
+      <input class="iname" data-f="i.name" data-g="${g.id}" data-i="${it.id}" value="${esc(it.name)}" placeholder="Nombre del ítem">
+      <label class="wt" title="Peso del ítem">×<input type="number" min="0" step="0.1" inputmode="decimal" data-f="i.weight" data-g="${g.id}" data-i="${it.id}" value="${it.weight}"></label>
+      <button class="ic" type="button" data-act="delI" data-g="${g.id}" data-i="${it.id}" title="Borrar ítem">✕</button>
+      <input class="itags" data-f="i.tags" data-g="${g.id}" data-i="${it.id}" value="${esc((it.tags || []).join(", "))}" placeholder="etiquetas, separadas por coma">
+    </div>`;
+  }
+  function renderGrupos(){
+    main.innerHTML = `<div class="bar-top"><button class="btn pri" type="button" data-act="addG">+ Subconjunto</button></div>
+    ${S.groups.map(g => `<section class="card grp ${g.active ? "" : "off"}">
+      <div class="gh">
+        <input type="checkbox" title="Considerar este subconjunto" data-f="g.active" data-g="${g.id}" ${g.active ? "checked" : ""}>
+        <input class="gname" data-f="g.name" data-g="${g.id}" value="${esc(g.name)}" placeholder="Nombre del subconjunto">
+        <label class="wt" title="Peso del subconjunto (multiplica el de cada ítem)">×<input type="number" min="0" step="0.1" inputmode="decimal" data-f="g.weight" data-g="${g.id}" value="${g.weight}"></label>
+        <button class="ic" type="button" data-act="togG" data-g="${g.id}" title="Mostrar u ocultar ítems">${g.collapsed ? "▸" : "▾"}</button>
+        <button class="ic" type="button" data-act="delG" data-g="${g.id}" title="Borrar subconjunto">🗑</button>
+      </div>
+      ${g.collapsed ? `<p class="mut sm" style="margin:6px 0 0">${g.items.length} ítems</p>` : `
+      <div class="items">${g.items.map(it => filaItem(g, it)).join("") || '<p class="mut sm">Sin ítems todavía.</p>'}</div>
+      <div class="acts"><button class="btn" type="button" data-act="addI" data-g="${g.id}">+ Ítem</button><button class="btn" type="button" data-act="bulk" data-g="${g.id}">📋 Pegar varios</button></div>`}
+    </section>`).join("") || '<p class="mut">No hay subconjuntos. Creá el primero.</p>'}
+    <p class="mut sm">El peso indica las chances relativas: ×2 tiene el doble que ×1, y ×0 no sale nunca. El peso del subconjunto multiplica el de sus ítems. Las etiquetas sirven para armar reglas.</p>`;
+  }
+  function renderReglas(){
+    main.innerHTML = `<section class="card">
+      <p class="mut sm" style="margin-top:0">Las reglas se aplican antes de cada ronda: definen qué ítems se consideran o se excluyen, y cuánto pesan. Los pesos se multiplican entre sí (ítem × subconjunto × reglas).</p>
+      <div>${S.rules.map(r => `<div class="rule ${r.active ? "" : "off"}">
+        <input type="checkbox" title="Regla activa" data-f="r.active" data-r="${r.id}" ${r.active ? "checked" : ""}>
+        <span class="rt">${esc(textoRegla(r))}</span>
+        <button class="ic" type="button" data-act="editR" data-r="${r.id}" title="Editar">✎</button>
+        <button class="ic" type="button" data-act="delR" data-r="${r.id}" title="Borrar">🗑</button></div>`).join("")
+        || '<p class="mut">Sin reglas: participan todos los ítems activos con su peso.</p>'}</div>
+      <div class="acts"><button class="btn pri" type="button" data-act="addR">+ Regla</button></div>
+    </section>`;
+  }
+  function renderHist(){
+    const n = S.history.length;
+    main.innerHTML = `<section class="card">
+      <div class="row"><h2>Historial (${n})</h2>${n ? '<button class="btn danger" type="button" data-act="clearH">Borrar todo</button>' : ""}</div>
+      <p class="mut sm">Las reglas «salieron en las últimas N rondas» y «nunca salieron» usan esta lista. Borrar una ronda la saca de esas reglas.</p>
+      ${S.history.map((h, i) => `<div class="hrow"><div><span class="mut sm">#${n - i} · ${fmtD(h.at)}</span>
+        <div>${h.secs.map(s => `${s.g ? `<b>${esc(s.g)}:</b> ` : ""}${s.items.map(p => esc(p.name)).join(", ") || "—"}`).join("<br>")}</div></div>
+        <button class="ic" type="button" data-act="delH" data-h="${h.id}" title="Borrar esta ronda">✕</button></div>`).join("")
+        || '<p class="mut">Todavía no hay rondas.</p>'}
+    </section>`;
+  }
+
+  // ---------- Edición en línea ----------
+  function onField(e){
+    const el = e.target, f = el.dataset.f; if(!f) return;
+    const v = el.type === "checkbox" ? el.checked : el.value, fin = e.type === "change";
+    const g = el.dataset.g && S.groups.find(x => x.id === el.dataset.g);
+    const it = g && el.dataset.i && g.items.find(x => x.id === el.dataset.i);
+    const r = el.dataset.r && S.rules.find(x => x.id === el.dataset.r);
+    switch(f){
+      case "cfg.count": S.cfg.count = v; if(fin) el.value = cnt(); break;
+      case "cfg.mode": S.cfg.mode = v; break;
+      case "cfg.replace": S.cfg.replace = v; break;
+      case "g.active": g.active = v; el.closest(".grp").classList.toggle("off", !v); break;
+      case "g.name": g.name = v; break;
+      case "g.weight": if(fin || v !== ""){ g.weight = num(v, 1); } if(fin) el.value = g.weight; break;
+      case "i.active": it.active = v; el.closest(".it").classList.toggle("off", !v); break;
+      case "i.name": it.name = v; break;
+      case "i.weight": if(fin || v !== ""){ it.weight = num(v, 1); } if(fin) el.value = it.weight; break;
+      case "i.tags": it.tags = String(v).split(",").map(s => s.trim()).filter(Boolean); break;
+      case "r.active": r.active = v; el.closest(".rule").classList.toggle("off", !v); break;
+    }
+    save();
+    if(f.startsWith("cfg.")) renderChances();
+  }
+  main.addEventListener("input", onField);
+  main.addEventListener("change", onField);
+  main.addEventListener("keydown", e => {
+    // Enter en el nombre de un ítem agrega otro debajo
+    if(e.key === "Enter" && e.target.classList.contains("iname")){
+      e.preventDefault();
+      const g = S.groups.find(x => x.id === e.target.dataset.g); if(!g) return;
+      const idx = g.items.findIndex(x => x.id === e.target.dataset.i);
+      const nuevo = mkI(""); g.items.splice(idx + 1, 0, nuevo); save(); render(); enfocar(nuevo.id);
+    }
+  });
+  function enfocar(iid){ const el = main.querySelector(`.iname[data-i="${iid}"]`); if(el){ el.focus(); el.scrollIntoView({block: "center", behavior: "smooth"}); } }
+
+  $("#tabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if(!b) return; S.tab = b.dataset.tab; save(); render(); window.scrollTo(0, 0); });
+  main.addEventListener("click", e => {
+    const b = e.target.closest("[data-act]"); if(!b) return;
+    const a = b.dataset.act, g = S.groups.find(x => x.id === b.dataset.g);
+    switch(a){
+      case "sortear": sortear(); break;
+      case "copiar": copiar(); break;
+      case "irReglas": e.preventDefault(); S.tab = "reglas"; save(); render(); break;
+      case "addG": { const ng = {id: uid(), name: "", active: true, weight: 1, items: [mkI("")]}; S.groups.push(ng); save(); render();
+        const el = main.querySelector(`.gname[data-g="${ng.id}"]`); if(el){ el.focus(); el.scrollIntoView({block: "center"}); } break; }
+      case "delG": confirmar(`¿Borrar el subconjunto «${esc(g.name || "sin nombre")}» y sus ${g.items.length} ítems?`, "Borrar", () => {
+        S.groups = S.groups.filter(x => x !== g); S.rules = S.rules.filter(r => !(r.tk === "group" && r.tv === g.id)); save(); render(); }); break;
+      case "togG": g.collapsed = !g.collapsed; save(); render(); break;
+      case "addI": { const ni = mkI(""); g.items.push(ni); g.collapsed = false; save(); render(); enfocar(ni.id); break; }
+      case "delI": g.items = g.items.filter(x => x.id !== b.dataset.i); save(); render(); break;
+      case "bulk": dlgPegar(g); break;
+      case "addR": dlgRegla(); break;
+      case "editR": dlgRegla(S.rules.find(r => r.id === b.dataset.r)); break;
+      case "delR": S.rules = S.rules.filter(r => r.id !== b.dataset.r); save(); render(); break;
+      case "delH": S.history = S.history.filter(h => h.id !== b.dataset.h); save(); render(); break;
+      case "clearH": confirmar("¿Borrar todo el historial? Las reglas de historial vuelven a cero.", "Borrar todo", () => { S.history = []; save(); render(); }); break;
+    }
+  });
+  async function copiar(){
+    const h = S.history[0]; if(!h) return;
+    const txt = textoResultado(h);
+    try{ await navigator.clipboard.writeText(txt); toast("Resultado copiado"); }
+    catch(e){ dlg(`<h3>Copiar resultado</h3><textarea readonly>${esc(txt)}</textarea><div class="acts"><button class="btn pri" data-x>Cerrar</button></div>`).querySelector("textarea").select(); }
+  }
+
+  // ---------- Diálogos ----------
+  function dlg(html){
+    const d = $("#dlg"); d.innerHTML = html;
+    d.querySelectorAll("[data-x]").forEach(b => { b.type = "button"; b.onclick = () => d.close(); });
+    if(!d.open) d.showModal();
+    return d;
+  }
+  $("#dlg").addEventListener("click", e => { if(e.target.id === "dlg") e.target.close(); });
+  function confirmar(msg, ok, fn){
+    const d = dlg(`<h3>Confirmar</h3><p>${msg}</p><div class="acts"><button class="btn" data-x>Cancelar</button><button class="btn pri" type="button" id="cOk">${esc(ok)}</button></div>`);
+    $("#cOk", d).onclick = () => { d.close(); fn(); };
+  }
+  function dlgPegar(g){
+    const d = dlg(`<h3>Pegar ítems en «${esc(g.name || "sin nombre")}»</h3>
+      <p class="mut sm" style="margin-top:0">Un ítem por línea. Opcional: <b>nombre | peso | etiquetas</b></p>
+      <textarea id="bTxt" placeholder="Pizza&#10;Milanesas | 2 | casera&#10;Sushi | 1 | salida, caro"></textarea>
+      <label class="chk"><input type="checkbox" id="bRep"> Reemplazar los ítems actuales</label>
+      <div class="acts"><button class="btn" data-x>Cancelar</button><button class="btn pri" type="button" id="bOk">Agregar</button></div>`);
+    $("#bOk", d).onclick = () => {
+      const nuevos = $("#bTxt", d).value.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => {
+        const [n, w, t] = l.split("|").map(s => (s || "").trim());
+        return mkI(n, w ? num(w, 1) : 1, t ? t.split(",").map(s => s.trim()).filter(Boolean) : []);
+      }).filter(i => i.name);
+      if(!nuevos.length){ toast("No hay líneas para agregar"); return; }
+      if($("#bRep", d).checked) g.items = nuevos; else g.items = g.items.filter(i => String(i.name).trim()).concat(nuevos);
+      g.collapsed = false; save(); d.close(); render(); toast(`${nuevos.length} ítems agregados`);
+    };
+    setTimeout(() => $("#bTxt", d).focus(), 50);
+  }
+  function dlgRegla(orig){
+    const r = orig ? {...orig} : {id: uid(), active: true, type: "peso", tk: "tag", tv: "", n: 3, factor: 2};
+    const d = dlg(`<h3>${orig ? "Editar regla" : "Nueva regla"}</h3>
+      <label>Acción<select id="rType">
+        <option value="excluir">Excluir (no participan)</option>
+        <option value="solo">Considerar solo (el resto queda afuera)</option>
+        <option value="peso">Cambiar el peso (más o menos chances)</option></select></label>
+      <label id="rFacL">Multiplicar el peso por<input id="rFac" type="number" min="0" step="0.1" inputmode="decimal" value="${num(r.factor, 2)}">
+        <small>2 = el doble de chances · 0,5 = la mitad · 0 = nunca</small></label>
+      <label>Aplica a<select id="rTk">
+        <option value="tag">Ítems con una etiqueta</option>
+        <option value="group">Un subconjunto</option>
+        <option value="text">Ítems cuyo nombre contiene un texto</option>
+        <option value="hist">Ítems que salieron en las últimas N rondas</option>
+        <option value="nunca">Ítems que nunca salieron</option></select></label>
+      <label id="rTagL">Etiqueta<input id="rTag" list="rTags" autocomplete="off"><datalist id="rTags">${allTags().map(t => `<option value="${esc(t)}">`).join("")}</datalist></label>
+      <label id="rGrpL">Subconjunto<select id="rGrp">${S.groups.map(g => `<option value="${g.id}">${esc(g.name || "sin nombre")}</option>`).join("")}</select></label>
+      <label id="rTxtL">Texto<input id="rTxt" autocomplete="off"></label>
+      <label id="rNL">Cantidad de rondas<input id="rN" type="number" min="1" step="1" inputmode="numeric" value="${r.n || 3}"></label>
+      <p class="mut sm" id="rPrev"></p>
+      <div class="acts"><button class="btn" data-x>Cancelar</button><button class="btn pri" type="button" id="rOk">Guardar</button></div>`);
+    const q = id => $("#" + id, d);
+    q("rType").value = r.type; q("rTk").value = r.tk;
+    if(r.tk === "tag") q("rTag").value = r.tv;
+    if(r.tk === "text") q("rTxt").value = r.tv;
+    if(r.tk === "group" && r.tv) q("rGrp").value = r.tv;
+    function leer(){
+      r.type = q("rType").value; r.tk = q("rTk").value; r.factor = num(q("rFac").value, 1); r.n = Math.max(1, parseInt(q("rN").value) || 1);
+      r.tv = r.tk === "tag" ? q("rTag").value.trim() : r.tk === "text" ? q("rTxt").value.trim() : r.tk === "group" ? q("rGrp").value : "";
+    }
+    function sync(){
+      leer();
+      q("rFacL").style.display = r.type === "peso" ? "" : "none";
+      q("rTagL").style.display = r.tk === "tag" ? "" : "none";
+      q("rGrpL").style.display = r.tk === "group" ? "" : "none";
+      q("rTxtL").style.display = r.tk === "text" ? "" : "none";
+      q("rNL").style.display = r.tk === "hist" ? "" : "none";
+      const c = contexto(); let n = 0;
+      S.groups.forEach(g => g.items.forEach(it => { if(String(it.name).trim() && coincide(r, it, g, c)) n++; }));
+      q("rPrev").textContent = `«${textoRegla(r)}» · hoy alcanza a ${n} ${n === 1 ? "ítem" : "ítems"}.`;
+    }
+    d.oninput = sync; d.onchange = sync; sync();
+    q("rOk").onclick = () => {
+      leer();
+      if((r.tk === "tag" || r.tk === "text") && !r.tv){ toast("Completá el valor de la regla"); return; }
+      if(r.tk === "group" && !r.tv){ toast("No hay subconjuntos para elegir"); return; }
+      const i = S.rules.findIndex(x => x.id === r.id);
+      if(i >= 0) S.rules[i] = r; else S.rules.push(r);
+      save(); d.close(); render();
+    };
+  }
+
+  // ---------- Menú: exportar / importar ----------
+  $("#menuBtn").addEventListener("click", () => {
+    const d = dlg(`<h3>Más opciones</h3><div class="menu">
+      <button class="btn" type="button" id="mExp">⬇️ Exportar datos (.json)</button>
+      <button class="btn" type="button" id="mImp">⬆️ Importar datos (.json)</button>
+      <button class="btn" type="button" id="mEj">✨ Cargar el ejemplo</button>
+      <button class="btn danger" type="button" id="mVac">🗑 Vaciar todo</button></div>
+      <p class="mut sm">Los datos se guardan en este navegador. Exportá un archivo para pasarlos a otro dispositivo o tener una copia.</p>
+      <div class="acts"><button class="btn" data-x>Cerrar</button></div>`);
+    $("#mExp", d).onclick = () => { exportar(); d.close(); };
+    $("#mImp", d).onclick = () => { d.close(); $("#fileIn").click(); };
+    $("#mEj", d).onclick = () => confirmar("¿Reemplazar todo por los datos de ejemplo?", "Cargar ejemplo", () => { S = ejemplo(); save(); render(); });
+    $("#mVac", d).onclick = () => confirmar("¿Borrar subconjuntos, reglas e historial? Conviene exportar antes.", "Vaciar", () => {
+      S = {groups: [], rules: [], history: [], cfg: {count: 1, mode: "global", replace: false}, tab: "grupos"}; save(); render(); });
+  });
+  function exportar(){
+    const v = (document.querySelector('meta[name="app-version"]') || {}).content || "";
+    const blob = new Blob([JSON.stringify({app: "random", version: v, exportado: new Date().toISOString(), data: S}, null, 2)], {type: "application/json"});
+    const a = document.createElement("a"), d = new Date();
+    a.href = URL.createObjectURL(blob);
+    a.download = `random-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}.json`;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    toast("Archivo exportado");
+  }
+  $("#fileIn").addEventListener("change", async e => {
+    const f = e.target.files[0]; e.target.value = ""; if(!f) return;
+    try{
+      const j = JSON.parse(await f.text()), d = normalizar(j && j.data ? j.data : j);
+      if(!d) throw new Error();
+      confirmar(`¿Reemplazar los datos actuales por los del archivo? (${d.groups.length} subconjuntos, ${d.rules.length} reglas, ${d.history.length} rondas)`, "Importar", () => { S = d; save(); render(); toast("Datos importados"); });
+    }catch(err){ toast("El archivo no tiene un formato válido"); }
+  });
+
+  let tt;
+  function toast(m){ const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("on"), 2200); }
+
+  render();
+})();
+</script>
+<!-- ===== Versión (estándar caja de apps) — bloque autónomo =====
+     Requiere en el <head>: <meta name="app-version" content="vX.Y.Z">
+     y en el encabezado: <button id="verBtn" class="vs-ver" type="button">v—</button>
+     (o, si la app ya muestra su propio texto de versión, marcar ese elemento con data-vs-open:
+      al tocarlo abre el diálogo y no se le cambia el texto).
+     1) El número escrito en el HTML se ve siempre (sin conexión, Apps Script, caché vieja).
+     2) Fecha y Changelog desde las Releases de GitHub (sin conexión: última copia guardada).
+     3) Si GitHub tiene una versión más alta: aviso "Hay una versión nueva, recargá". -->
+<style>
+  .vs-ver{border:1px solid #d0d5dd;background:#fff;color:#555;font:600 12px system-ui,sans-serif;padding:3px 10px;border-radius:999px;cursor:pointer;vertical-align:middle}
+  .vs-ver.new,[data-vs-open].new{border-color:#d97706;color:#d97706}
+  [data-vs-open]{cursor:pointer}
+  .vs-upd{display:none;position:sticky;top:0;z-index:9998;align-items:center;justify-content:space-between;gap:10px;padding:9px 14px;background:#f59e0b;color:#1c1f26;font:14px system-ui,sans-serif}
+  .vs-upd.on{display:flex}
+  .vs-upd button,.vs-dlg .vs-acts button,.vs-dlg .vs-acts a{border:1px solid #c9ced6;border-radius:10px;padding:8px 13px;background:#fff;color:#1c1f26;font:14px system-ui,sans-serif;cursor:pointer;text-decoration:none}
+  .vs-upd button{border-color:#1c1f26;background:#1c1f26;color:#fff}
+  .vs-dlg{border:1px solid #d0d5dd;border-radius:16px;padding:20px;max-width:min(560px,92vw);width:100%;font:15px/1.45 system-ui,sans-serif;color:#1c1f26;background:#fff}
+  .vs-dlg h3{margin:0 0 8px}.vs-dlg .vs-mut{color:#6b7280}
+  .vs-dlg .vs-rels{max-height:60vh;overflow:auto}
+  .vs-dlg .vs-rel{border-top:1px solid #e5e7eb;padding:10px 0}.vs-dlg .vs-rel pre{white-space:pre-wrap;font:inherit;font-size:14px;color:#6b7280;margin:4px 0 0}
+  .vs-dlg .vs-acts{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin-top:14px}
+  @media print{.vs-ver,.vs-upd,.vs-dlg{display:none!important}}
+  .vs-dlg .vs-acts .vs-pri{background:#4f46e5;border-color:#4f46e5;color:#fff}
+</style>
+<div class="vs-upd" id="vsUpd" role="status"><span id="vsUpdTxt">Hay una versión nueva, recargá.</span><button type="button" id="vsUpdBtn">Recargar</button></div>
+<dialog class="vs-dlg" id="vsDlg"></dialog>
+<script>
+(function(){
+  const REPO = "luchorcompartidos/random";                       // usuario/repo de GitHub
+  const LOG_FN = "";                   // función propia de Changelog de la app (vacío = usar el de GitHub)
+  const KEY  = "vs_rels_" + REPO;
+  const APP_VERSION = (document.querySelector('meta[name="app-version"]')||{}).content || "v—";
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const fmt = s => new Date(s).toLocaleString("es-AR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+  const semv = t => (String(t).replace(/^v/,"").split(".").map(n=>parseInt(n)||0).concat([0,0,0])).slice(0,3);
+  const cmpV = (a,b) => { const x=semv(a), y=semv(b); for(let i=0;i<3;i++) if(x[i]!==y[i]) return y[i]-x[i]; return 0; };
+  let rels = null; try{ rels = JSON.parse(localStorage.getItem(KEY)||"null"); }catch(e){}
+  // Estado de la última consulta a GitHub: así el diálogo distingue "no está publicada" de "no se pudo consultar"
+  let relsAt = 0; try{ relsAt = +localStorage.getItem(KEY+"_t") || 0; }catch(e){}
+  let lastFail = false, loading = null;
+  // Si el diálogo quedó fuera del <body> (bloque pegado al final), lo movemos
+  [$("vsUpd"),$("vsDlg")].forEach(el=>{ if(el && el.parentNode!==document.body) document.body.appendChild(el); });
+  document.body.insertBefore($("vsUpd"), document.body.firstChild);
+  // Dentro de Apps Script la app sale de la copia del script: recargar no alcanza, hay que actualizarlo.
+  const GAS = !!(window.google && window.google.script && window.google.script.run);
+  const REL_URL = `https://github.com/${REPO}/releases`;
+  if(GAS){ const ub=$("vsUpdBtn"); ub.textContent = "Ver Releases"; }
+  const ultima = () => rels && rels[0];
+  const hayNueva = () => !!(ultima() && APP_VERSION!=="v—" && cmpV(ultima().tag, APP_VERSION) < 0);
+  function show(){
+    const b = $("verBtn"), n = hayNueva();
+    if(b){ b.textContent = APP_VERSION + (n?" ⬆":""); b.classList.toggle("new", n); b.title = n ? "Hay una versión nueva: "+ultima().tag : "Versión"; }
+    document.querySelectorAll("[data-vs-open]").forEach(el=>{ el.classList.toggle("new", n); if(n) el.title = "Hay una versión nueva: "+ultima().tag; });
+    $("vsUpd").classList.toggle("on", n);
+    if(n) $("vsUpdTxt").textContent = GAS ? `Hay una versión nueva (${ultima().tag}): actualizá el script de Apps Script.`
+                                          : `Hay una versión nueva (${ultima().tag}), recargá.`;
+  }
+  function load(){ if(!loading) loading = doLoad().finally(()=>{ loading = null; }); return loading; }
+  async function doLoad(){
+    try{
+      const r = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=100`,{headers:{Accept:"application/vnd.github+json"},cache:"no-store"});
+      if(!r.ok){ lastFail = true; return; }
+      lastFail = false; relsAt = Date.now(); try{ localStorage.setItem(KEY+"_t", String(relsAt)); }catch(e){}
+      rels = (await r.json()).filter(x=>!x.draft && !x.prerelease).map(x=>{
+        const f = (x.assets||[]).map(a=>a.updated_at).filter(Boolean).sort();
+        return { tag:x.tag_name, date:f.length?f[f.length-1]:(x.published_at||x.created_at), deArchivo:f.length>0, body:x.body||"" };
+      }).sort((a,b)=>cmpV(a.tag,b.tag));
+      try{ localStorage.setItem(KEY, JSON.stringify(rels)); }catch(e){}
+      show();
+    }catch(e){ lastFail = true; }
+  }
+  function recargar(){ if(GAS){ window.open(REL_URL, "_blank", "noopener"); return; } const u = new URL(location.href); u.searchParams.set("v", Date.now()); location.replace(u); }
+  function dlg(html){
+    const d = $("vsDlg"); d.innerHTML = html;
+    d.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>d.close());
+    if(!d.open) d.showModal(); return d;
+  }
+  let reintento = false;
+  function openVer(){
+    const r = (rels||[]).find(x=>x.tag===APP_VERSION), n = hayNueva();
+    const hace = relsAt ? ` (información de hace ${Math.max(1, Math.round((Date.now()-relsAt)/60000))} min)` : "";
+    // Si la lista guardada no tiene esta versión, se vuelve a consultar GitHub antes de concluir nada
+    if(!r && !reintento && navigator.onLine !== false){ reintento = true; dlg(`<h3>Versión ${esc(APP_VERSION)}</h3><p class="vs-mut">Consultando GitHub…</p>`); load().then(()=>{ if($("vsDlg").open) openVer(); reintento = false; }); return; }
+    const fecha = r ? (r.deArchivo?"Archivos actualizados el ":"Publicada el ")+"<b>"+fmt(r.date)+"</b>"
+                    : navigator.onLine === false ? `Sin conexión: no se puede consultar GitHub ahora${rels ? hace : ""}.`
+                    : lastFail ? `No se pudo consultar GitHub (puede ser un límite de consultas seguidas). Probá de nuevo en unos minutos${rels ? hace : ""}.`
+                    : rels ? "Esta versión todavía no figura en las Releases de GitHub. Se publica unos segundos después de cada entrega: probá de nuevo en un minuto."
+                    : "Fecha no disponible (requiere conexión).";
+    const d = dlg(`<h3>Versión ${esc(APP_VERSION)}</h3><p class="vs-mut">${fecha}</p>${n?`<p><b>Hay una versión nueva: ${esc(ultima().tag)}.</b>${GAS?" Para usarla, actualizá el script de Apps Script.":""}</p>`:""}
+      <div class="vs-acts">${n?`<button class="vs-pri" id="vsRec" type="button">${GAS?"Ver Releases":"↻ Recargar"}</button>`:""}<button ${n?"":'class="vs-pri"'} id="vsLog" type="button">📋 Changelog</button><button data-x type="button">Cerrar</button></div>`);
+    d.querySelector("#vsLog").onclick = () => { if(LOG_FN && typeof window[LOG_FN]==="function"){ d.close(); window[LOG_FN](); } else openLog(); };
+    const rb = d.querySelector("#vsRec"); if(rb) rb.onclick = recargar;
+  }
+  function openLog(){
+    const list = (rels||[]).map(r=>`<div class="vs-rel"><b>${esc(r.tag)}</b>${r.tag===APP_VERSION?' <span class="vs-mut">(la que estás usando)</span>':""} · <span class="vs-mut">${fmt(r.date)}</span>${r.body?`<pre>${esc(r.body)}</pre>`:""}</div>`).join("");
+    dlg(`<h3>Changelog</h3><div class="vs-rels">${list||'<p class="vs-mut">Sin datos todavía (requiere conexión).</p>'}</div>
+      <div class="vs-acts"><a href="${REL_URL}" target="_blank" rel="noopener">Ver Releases en GitHub ↗</a><button data-x type="button">Cerrar</button></div>`);
+  }
+  $("vsDlg").addEventListener("click", e=>{ if(e.target.id==="vsDlg") e.target.close(); });
+  if($("verBtn")) $("verBtn").addEventListener("click", openVer);
+  document.querySelectorAll("[data-vs-open]").forEach(el=>el.addEventListener("click", openVer));
+  window.VS = { abrir: openVer, version: APP_VERSION, hayNueva };
+  $("vsUpdBtn").addEventListener("click", recargar);
+  show(); load();
+  // Se vuelve a consultar al volver a la app, si la información tiene más de 10 minutos
+  document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible" && Date.now()-relsAt > 600000) load(); });
+  window.addEventListener("online", ()=>load());
+})();
+</script>
+<!-- ===== fin bloque Versión ===== -->
 </body>
 </html>
