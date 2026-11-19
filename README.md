@@ -18,6 +18,7 @@ App web para hacer **selecciones aleatorias** a partir de subconjuntos de ítems
 - **Orden:** conjuntos, subconjuntos e ítems se pueden ordenar a mano (arrastrando desde ⠿ o con ↑↓), por nombre, por peso, por cantidad de ítems, con los activos primero o por más o menos sorteados. Hay botones para contraer y expandir todo.
 - **Tema:** Sistema, Claro u Oscuro, desde el menú ⋯.
 - **Reiniciar sorteo:** deja el conjunto como recién creado para el sorteo (las reglas de historial empiezan de cero y el contador vuelve a 0) sin borrar el historial. Se puede deshacer.
+- **Ocultar y archivar** (conjuntos, subconjuntos e ítems, cada uno por separado): ocultar lo saca de la vista y lo destilda; al mostrarlo de nuevo hay que volver a tildarlo para que participe. Archivar lo saca de todo (listas, sorteo, reglas) y lo guarda en «🗄 Archivados»; al desarchivarlo vuelve tal como estaba.
 - **Copiar y mover:** desde ⋯ en cada ítem o subconjunto se puede duplicar, copiar o mover a otro subconjunto o conjunto. Con «☑ Seleccionar» se trabaja con varios ítems a la vez.
 - **Planilla:** exportar e importar en Excel (.xlsx, con hojas Ítems, Conjuntos, Reglas e Historial) o CSV, y leer una Google Sheet publicada en la web (solo lectura). Al importar se puede actualizar por nombre, agregar como conjuntos nuevos o reemplazar todo. Lectura y escritura de .xlsx sin librerías externas.
 - **Datos:** se guardan en el navegador. Desde el menú ⋯ hay respaldo completo en `.json`.

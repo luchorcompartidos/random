@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="app-version" content="v0.0.3">
+<meta name="app-version" content="v0.0.4">
 <meta name="theme-color" content="#4f46e5">
 <title>Random · Selecciones aleatorias</title>
 <script>
@@ -105,6 +105,10 @@
   .selbar{position:fixed;left:50%;transform:translateX(-50%);bottom:10px;width:min(740px,calc(100% - 16px));display:flex;flex-wrap:wrap;align-items:center;gap:6px;background:var(--card);border:1px solid var(--ac);border-radius:14px;padding:8px 10px;box-shadow:0 6px 24px rgba(0,0,0,.2);z-index:60}
   .selbar #selN{font-weight:600;font-size:14px;margin-right:auto}
   button:disabled{opacity:.45;cursor:default}
+  .hid > .gh,.it.hid,.srow.hid,.set.hid > .meta{opacity:.55}
+  .oc{display:inline-block;font-size:11px;padding:1px 6px;border-radius:9px;background:var(--bd);color:var(--mut);white-space:nowrap}
+  .arow{display:flex;align-items:center;gap:6px;padding:8px 0;border-top:1px solid var(--bd)}
+  .arow .sn{flex:1;min-width:0}
   /* Diálogo */
   .dlg{border:1px solid var(--bd);border-radius:16px;padding:18px;width:min(520px,94vw);color:var(--tx);background:var(--card)}
   .dlg::backdrop{background:rgba(15,23,42,.45)}
@@ -158,6 +162,10 @@
   const pct = p => p >= 0.9995 ? "100%" : p > 0 && p < 0.001 ? "<0,1%" : (p * 100).toFixed(p < 0.1 ? 1 : 0).replace(".", ",") + "%";
   const mkI = (name, weight = 1, tags = []) => ({id: uid(), name, weight, tags, active: true, hits: 0});
   const pl = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+  // Ocultos: no se ven (salvo «Mostrar ocultos») y quedan destildados. Archivados: fuera de todo hasta desarchivarlos.
+  const usable = x => !x.archived && !x.hidden;
+  const visibles = arr => arr.filter(x => !x.archived && (S.verOcultos || !x.hidden));
+  const marcaOc = x => x.hidden ? ' <span class="oc">🙈 oculto</span>' : "";
   const SORT0 = {sets: "manual", groups: "manual", items: "manual"};
 
   // ---------- Datos ----------
@@ -268,13 +276,15 @@
   function reordenar(kind, p, ids){
     const [arr, lvl] = listaDe(kind, p); if(!arr) return;
     const pos = new Map(ids.map((id, i) => [id, i]));
-    arr.sort((a, b) => (pos.has(a.id) ? pos.get(a.id) : 1e9) - (pos.has(b.id) ? pos.get(b.id) : 1e9));
+    // Los elementos no visibles (ocultos o archivados) conservan su lugar
+    const vis = arr.filter(x => pos.has(x.id)).sort((a, b) => pos.get(a.id) - pos.get(b.id));
+    let k = 0; for(let i = 0; i < arr.length; i++) if(pos.has(arr[i].id)) arr[i] = vis[k++];
     if(S.sort[lvl] !== "manual"){ S.sort[lvl] = "manual"; toast(`«${SORT_LBL[lvl]}» pasó a Manual`); }
     save(); render();
   }
   function mover(kind, id, p, dir){
     const [arr, lvl] = listaDe(kind, p); if(!arr) return;
-    const ids = ordenar(arr, lvl).map(x => x.id), i = ids.indexOf(id), j = i + dir;
+    const ids = ordenar(visibles(arr), lvl).map(x => x.id), i = ids.indexOf(id), j = i + dir;
     if(i < 0 || j < 0 || j >= ids.length) return;
     [ids[i], ids[j]] = [ids[j], ids[i]];
     reordenar(kind, p, ids);
@@ -349,6 +359,7 @@
   function evaluar(){
     const set = C(), c = contexto(), act = set.rules.filter(r => r.active), solos = act.filter(r => r.type === "solo"), rows = [];
     for(const g of set.groups) for(const it of g.items){
+      if(!usable(g) || !usable(it)) continue;
       if(!String(it.name || "").trim()) continue;
       const row = {it, g, w: num(it.weight) * num(g.weight), notes: [], why: ""};
       if(!g.active) row.why = "Subconjunto desactivado";
@@ -366,7 +377,7 @@
     return rows;
   }
   function secciones(rows){
-    if(C().cfg.mode === "grupo") return ordenar(C().groups, "groups").filter(g => g.active).map(g => ({g, rows: rows.filter(r => r.ok && r.g === g)}));
+    if(C().cfg.mode === "grupo") return ordenar(C().groups, "groups").filter(g => g.active && usable(g)).map(g => ({g, rows: rows.filter(r => r.ok && r.g === g)}));
     return [{g: null, rows: rows.filter(r => r.ok)}];
   }
 
@@ -427,10 +438,17 @@
 
   // ---------- Vistas ----------
   const TABS = [["sortear", "🎲", "Sortear"], ["conjuntos", "🗂️", "Conjuntos"], ["grupos", "📦", "Subconjuntos"], ["reglas", "⚖️", "Reglas"], ["hist", "🕘", "Historial"]];
+  function asegurarActivo(){
+    const a = S.sets.find(x => x.id === S.active);
+    const antes = S.active;
+    if(!a || !usable(a)){ const n = S.sets.find(usable); if(n) S.active = n.id; else if(!a && S.sets[0]) S.active = S.sets[0].id; }
+    if(S.active !== antes) save();
+  }
   function render(){
+    asegurarActivo();
     if(S.tab !== "grupos" && selMode) salirSel();
     $("#tabs").innerHTML = TABS.map(([id, ic, t]) => `<button type="button" data-tab="${id}" class="${S.tab === id ? "on" : ""}"><span>${ic}</span>${t}</button>`).join("");
-    $("#setbar").innerHTML = S.tab === "conjuntos" ? "" : `<div class="setbar"><span>Conjunto</span><select id="setSel" aria-label="Conjunto en uso">${ordenar(S.sets, "sets").map(s =>
+    $("#setbar").innerHTML = S.tab === "conjuntos" ? "" : `<div class="setbar"><span>Conjunto</span><select id="setSel" aria-label="Conjunto en uso">${ordenar(S.sets.filter(s => usable(s) || s.id === C().id), "sets").map(s =>
       `<option value="${s.id}" ${s.id === C().id ? "selected" : ""}>${esc(s.name || "Sin nombre")}</option>`).join("")}</select></div>`;
     ({sortear: renderSortear, conjuntos: renderConjuntos, grupos: renderGrupos, reglas: renderReglas, hist: renderHist}[S.tab] || renderSortear)();
   }
@@ -486,40 +504,41 @@
         <button class="btn pri" type="button" data-act="addS">+ Conjunto</button>
         <button class="btn sm" type="button" data-act="colAll" data-lvl="sets">Contraer todo</button>
         <button class="btn sm" type="button" data-act="expAll" data-lvl="sets">Expandir todo</button>
+        ${botonesOcArc("sets")}
       </div>
       <div class="tools">${selOrden("sets")}${selOrden("groups")}</div>
       <p class="mut sm">Cada conjunto es independiente: tiene sus propios subconjuntos, reglas, configuración e historial, y nunca se mezcla con otro en un sorteo. Arrastrá desde ⠿ para cambiar el orden.</p>
-      <div>${ordenar(S.sets, "sets").map(s => `<section class="card set ${s.id === act.id ? "act" : ""}" data-drag="set" data-id="${s.id}">
+      <div>${ordenar(visibles(S.sets), "sets").map(s => `<section class="card set ${s.id === act.id ? "act" : ""} ${s.hidden ? "hid" : ""}" data-drag="set" data-id="${s.id}">
         <div class="gh">
           <span class="hdl" title="Arrastrar para mover">⠿</span>
           <input class="gname" data-f="s.name" data-s="${s.id}" value="${esc(s.name)}" placeholder="Nombre del conjunto">
           ${flechas("set", s.id, "")}
           <button class="ic" type="button" data-act="tog" data-lvl="sets" data-id="${s.id}" title="Mostrar u ocultar subconjuntos">${s.collapsed ? "▸" : "▾"}</button>
         </div>
-        <p class="mut sm meta">${pl(s.groups.length, "subconjunto", "subconjuntos")} · ${pl(itemsS(s), "ítem", "ítems")} · 🎲 ${pl(hitsS(s), "vez sorteado", "veces sorteados")} · ${pl(s.history.length, "ronda", "rondas")}</p>
-        ${s.collapsed ? "" : `<div class="sub">${ordenar(s.groups, "groups").map(g => `<div class="srow ${g.active ? "" : "off"}" data-drag="group" data-id="${g.id}" data-p="${s.id}">
-            <span class="hdl" title="Arrastrar para mover">⠿</span><span class="sn">${esc(g.name || "Sin nombre")}</span>
+        <p class="mut sm meta">${s.hidden ? '<span class="oc">🙈 oculto</span> · ' : ""}${pl(s.groups.length, "subconjunto", "subconjuntos")} · ${pl(itemsS(s), "ítem", "ítems")} · 🎲 ${pl(hitsS(s), "vez sorteado", "veces sorteados")} · ${pl(s.history.length, "ronda", "rondas")}</p>
+        ${s.collapsed ? "" : `<div class="sub">${ordenar(visibles(s.groups), "groups").map(g => `<div class="srow ${g.active ? "" : "off"} ${g.hidden ? "hid" : ""}" data-drag="group" data-id="${g.id}" data-p="${s.id}">
+            <span class="hdl" title="Arrastrar para mover">⠿</span><span class="sn">${esc(g.name || "Sin nombre")}${marcaOc(g)}</span>
             <span class="mut sm">${pl(g.items.length, "ítem", "ítems")} · ×${fmtN(num(g.weight))} · 🎲 ${hitsG(g)}</span>${flechas("group", g.id, s.id)}</div>`).join("")
           || '<p class="mut sm">Sin subconjuntos.</p>'}</div>`}
         <div class="acts">
-          ${s.id === act.id ? '<span class="badge">✔ En uso</span>' : `<button class="btn pri" type="button" data-act="useS" data-id="${s.id}">Usar</button>`}
+          ${s.id === act.id ? '<span class="badge">✔ En uso</span>' : s.hidden ? "" : `<button class="btn pri" type="button" data-act="useS" data-id="${s.id}">Usar</button>`}
           <button class="btn" type="button" data-act="editS" data-id="${s.id}">📦 Editar</button>
           <button class="btn" type="button" data-act="dupS" data-id="${s.id}">⧉ Duplicar</button>
           <span class="sp"></span>
-          <button class="ic" type="button" data-act="delS" data-id="${s.id}" title="Borrar conjunto">🗑</button>
+          <button class="ic" type="button" data-act="sMenu" data-id="${s.id}" title="Ocultar, archivar o borrar">⋯</button>
         </div>
       </section>`).join("")}</div>`;
   }
   function filaItem(g, it){
-    return `<div class="it ${it.active ? "" : "off"} ${selMode && sel.has(it.id) ? "sel" : ""}" data-drag="item" data-id="${it.id}" data-p="${g.id}">
+    return `<div class="it ${it.active ? "" : "off"} ${it.hidden ? "hid" : ""} ${selMode && sel.has(it.id) ? "sel" : ""}" data-drag="item" data-id="${it.id}" data-p="${g.id}">
       ${selMode ? `<input type="checkbox" class="selchk" data-sel="${it.id}" title="Seleccionar" ${sel.has(it.id) ? "checked" : ""}>` : '<span class="hdl" title="Arrastrar para mover">⠿</span>'}
-      <input type="checkbox" title="Considerar este ítem" data-f="i.active" data-g="${g.id}" data-i="${it.id}" ${it.active ? "checked" : ""}>
+      <input type="checkbox" title="${it.hidden ? "Está oculto: mostralo primero desde ⋯" : "Considerar este ítem"}" data-f="i.active" data-g="${g.id}" data-i="${it.id}" ${it.active ? "checked" : ""} ${it.hidden ? "disabled" : ""}>
       <input class="iname" data-f="i.name" data-g="${g.id}" data-i="${it.id}" value="${esc(it.name)}" placeholder="Nombre del ítem">
       <label class="wt" title="Peso del ítem">×<input type="number" min="0" step="0.1" inputmode="decimal" data-f="i.weight" data-g="${g.id}" data-i="${it.id}" value="${it.weight}"></label>
       <button class="ic" type="button" data-act="iMenu" data-g="${g.id}" data-i="${it.id}" title="Duplicar, copiar, mover o borrar">⋯</button>
       <div class="i2">
         <input class="itags" data-f="i.tags" data-g="${g.id}" data-i="${it.id}" value="${esc((it.tags || []).join(", "))}" placeholder="etiquetas, separadas por coma">
-        <span class="hits" title="Veces que salió">🎲 ${hitsI(it)}</span>${flechas("item", it.id, g.id)}
+        ${it.hidden ? '<span class="oc">🙈</span>' : ""}<span class="hits" title="Veces que salió">🎲 ${hitsI(it)}</span>${flechas("item", it.id, g.id)}
       </div>
     </div>`;
   }
@@ -530,19 +549,20 @@
         <button class="btn sm" type="button" data-act="colAll" data-lvl="groups">Contraer todo</button>
         <button class="btn sm" type="button" data-act="expAll" data-lvl="groups">Expandir todo</button>
         <button class="btn sm ${selMode ? "on" : ""}" type="button" data-act="selMode">☑ Seleccionar</button>
+        ${botonesOcArc("groups")}
       </div>
       <div class="tools">${selOrden("groups")}${selOrden("items")}</div>
-      <div>${ordenar(set.groups, "groups").map(g => `<section class="card grp ${g.active ? "" : "off"}" data-drag="group" data-id="${g.id}" data-p="${set.id}">
+      <div>${ordenar(visibles(set.groups), "groups").map(g => `<section class="card grp ${g.active ? "" : "off"} ${g.hidden ? "hid" : ""}" data-drag="group" data-id="${g.id}" data-p="${set.id}">
         <div class="gh">
           ${selMode ? `<input type="checkbox" class="selchk" data-selg="${g.id}" title="Seleccionar todos sus ítems">` : '<span class="hdl" title="Arrastrar para mover">⠿</span>'}
-          <input type="checkbox" title="Considerar este subconjunto" data-f="g.active" data-g="${g.id}" ${g.active ? "checked" : ""}>
+          <input type="checkbox" title="${g.hidden ? "Está oculto: mostralo primero desde ⋯" : "Considerar este subconjunto"}" data-f="g.active" data-g="${g.id}" ${g.active ? "checked" : ""} ${g.hidden ? "disabled" : ""}>
           <input class="gname" data-f="g.name" data-g="${g.id}" value="${esc(g.name)}" placeholder="Nombre del subconjunto">
           <label class="wt" title="Peso del subconjunto (multiplica el de cada ítem)">×<input type="number" min="0" step="0.1" inputmode="decimal" data-f="g.weight" data-g="${g.id}" value="${g.weight}"></label>
           <button class="ic" type="button" data-act="tog" data-lvl="groups" data-id="${g.id}" title="Mostrar u ocultar ítems">${g.collapsed ? "▸" : "▾"}</button>
         </div>
-        ${g.collapsed ? "" : `<div class="items">${ordenar(g.items, "items").map(it => filaItem(g, it)).join("") || '<p class="mut sm">Sin ítems todavía.</p>'}</div>`}
+        ${g.collapsed ? "" : `<div class="items">${ordenar(visibles(g.items), "items").map(it => filaItem(g, it)).join("") || '<p class="mut sm">Sin ítems todavía.</p>'}</div>`}
         <div class="acts">
-          ${g.collapsed ? `<span class="mut sm">${pl(g.items.length, "ítem", "ítems")} · 🎲 ${hitsG(g)}</span>` : `<button class="btn" type="button" data-act="addI" data-g="${g.id}">+ Ítem</button><button class="btn" type="button" data-act="bulk" data-g="${g.id}">📋 Pegar varios</button>`}
+          ${g.hidden ? '<span class="oc">🙈 oculto</span>' : ""}${g.collapsed ? `<span class="mut sm">${pl(g.items.length, "ítem", "ítems")} · 🎲 ${hitsG(g)}</span>` : `<button class="btn" type="button" data-act="addI" data-g="${g.id}">+ Ítem</button><button class="btn" type="button" data-act="bulk" data-g="${g.id}">📋 Pegar varios</button>`}
           <span class="sp"></span>${flechas("group", g.id, set.id)}
           <button class="ic" type="button" data-act="gMenu" data-g="${g.id}" title="Duplicar, copiar, mover o borrar">⋯</button>
         </div>
@@ -552,6 +572,8 @@
         <button class="btn sm" type="button" data-act="sCop" data-need>📋 Copiar a…</button>
         <button class="btn sm" type="button" data-act="sMov" data-need>➡️ Mover a…</button>
         <button class="btn sm" type="button" data-act="sDup" data-need>⧉ Duplicar</button>
+        <button class="btn sm" type="button" data-act="sHid" data-need>🙈 Ocultar</button>
+        <button class="btn sm" type="button" data-act="sArc" data-need>🗄 Archivar</button>
         <button class="btn sm danger" type="button" data-act="sDel" data-need title="Borrar seleccionados">🗑</button>
         <button class="btn sm" type="button" data-act="selOff" title="Terminar selección">✕</button></div>` : ""}`;
     barraSel();
@@ -597,7 +619,7 @@
     const el = e.target;
     if(el.classList.contains("selchk")){
       if(e.type === "change"){
-        if(el.dataset.selg){ const g = C().groups.find(x => x.id === el.dataset.selg); if(g){ g.items.forEach(i => el.checked ? sel.add(i.id) : sel.delete(i.id)); g.collapsed = false; render(); } }
+        if(el.dataset.selg){ const g = C().groups.find(x => x.id === el.dataset.selg); if(g){ visibles(g.items).forEach(i => el.checked ? sel.add(i.id) : sel.delete(i.id)); g.collapsed = false; render(); } }
         else { el.checked ? sel.add(el.dataset.sel) : sel.delete(el.dataset.sel); el.closest(".it").classList.toggle("sel", el.checked); barraSel(); }
       }
       return;
@@ -685,6 +707,11 @@
           set.groups.forEach(gg => gg.items.forEach(i => i.hits = hitsI(i) + (bk.hits[i.id] || 0)));
           set.resetAt = bk.prevResetAt || 0; delete set.resetBackup; save(); render(); toast("Reinicio deshecho"); }); break; }
       // Menús, selección, copiar y mover
+      case "sMenu": if(s) menuSet(s); break;
+      case "verOc": S.verOcultos = !S.verOcultos; save(); render(); break;
+      case "verArc": dlgArchivados(b.dataset.lvl); break;
+      case "sHid": { const l = selItems(); l.forEach(({it}) => ocultar(it, true)); salirSel(); save(); render(); toast(pl(l.length, "ítem oculto", "ítems ocultos") + " y destildados"); break; }
+      case "sArc": { const l = selItems(); l.forEach(({it}) => it.archived = true); salirSel(); save(); render(); toast(pl(l.length, "ítem archivado", "ítems archivados")); break; }
       case "iMenu": { const it = g && g.items.find(x => x.id === b.dataset.i); if(it) menuItem(g, it); break; }
       case "gMenu": if(g) menuGrupo(g); break;
       case "selMode": if(selMode) salirSel(); else selMode = true; render(); break;
@@ -749,7 +776,7 @@
         <option value="hist">Ítems que salieron en las últimas N rondas</option>
         <option value="nunca">Ítems que nunca salieron</option></select></label>
       <label id="rTagL">Etiqueta<input id="rTag" list="rTags" autocomplete="off"><datalist id="rTags">${allTags().map(t => `<option value="${esc(t)}">`).join("")}</datalist></label>
-      <label id="rGrpL">Subconjunto<select id="rGrp">${set.groups.map(g => `<option value="${g.id}">${esc(g.name || "sin nombre")}</option>`).join("")}</select></label>
+      <label id="rGrpL">Subconjunto<select id="rGrp">${set.groups.filter(g => !g.archived).map(g => `<option value="${g.id}">${esc(g.name || "sin nombre")}</option>`).join("")}</select></label>
       <label id="rTxtL">Texto<input id="rTxt" autocomplete="off"></label>
       <label id="rNL">Cantidad de rondas<input id="rN" type="number" min="1" step="1" inputmode="numeric" value="${r.n || 3}"></label>
       <p class="mut sm" id="rPrev"></p>
@@ -846,8 +873,8 @@
     $("#selN").textContent = n === 1 ? "1 seleccionado" : n + " seleccionados";
     b.querySelectorAll("button[data-need]").forEach(x => x.disabled = !n);
     main.querySelectorAll("[data-selg]").forEach(c => {
-      const g = C().groups.find(x => x.id === c.dataset.selg), k = g ? g.items.filter(i => sel.has(i.id)).length : 0;
-      c.checked = !!g && k > 0 && k === g.items.length; c.indeterminate = k > 0 && !c.checked;
+      const g = C().groups.find(x => x.id === c.dataset.selg), vs = g ? visibles(g.items) : [], k = vs.filter(i => sel.has(i.id)).length;
+      c.checked = k > 0 && k === vs.length; c.indeterminate = k > 0 && !c.checked;
     });
   }
   const clonItem = (it, sufijo) => ({...JSON.parse(JSON.stringify(it)), id: uid(), hits: 0, name: it.name + (sufijo || "")});
@@ -859,7 +886,7 @@
     if(!lista.length) return;
     const verbo = mover ? "Mover" : "Copiar";
     const d = dlg(`<h3>${verbo} ${pl(lista.length, "ítem", "ítems")} a…</h3>
-      <label>Conjunto<select id="dSet">${ordenar(S.sets, "sets").map(s => `<option value="${s.id}" ${s.id === C().id ? "selected" : ""}>${esc(s.name || "Sin nombre")}</option>`).join("")}</select></label>
+      <label>Conjunto<select id="dSet">${ordenar(S.sets.filter(s => !s.archived), "sets").map(s => `<option value="${s.id}" ${s.id === C().id ? "selected" : ""}>${esc(s.name || "Sin nombre")}</option>`).join("")}</select></label>
       <label>Subconjunto<select id="dGrp"></select></label>
       <label id="dNewL">Nombre del subconjunto nuevo<input id="dNew" autocomplete="off"></label>
       <p class="mut sm">${mover ? "Los ítems conservan su contador 🎲." : "Las copias arrancan con el contador 🎲 en 0."}</p>
@@ -867,7 +894,7 @@
     const sync = () => { $("#dNewL", d).style.display = $("#dGrp", d).value === "__new" ? "" : "none"; };
     const fill = () => {
       const s = S.sets.find(x => x.id === $("#dSet", d).value);
-      $("#dGrp", d).innerHTML = ordenar(s.groups, "groups").map(g => `<option value="${g.id}">${esc(g.name || "Sin nombre")}</option>`).join("") + '<option value="__new">➕ Subconjunto nuevo…</option>';
+      $("#dGrp", d).innerHTML = ordenar(s.groups.filter(g => !g.archived), "groups").map(g => `<option value="${g.id}">${esc(g.name || "Sin nombre")}</option>`).join("") + '<option value="__new">➕ Subconjunto nuevo…</option>';
       sync();
     };
     $("#dSet", d).onchange = fill; $("#dGrp", d).onchange = sync; fill();
@@ -890,7 +917,7 @@
   }
   // Copiar o mover un subconjunto entero a otro conjunto
   function dlgDestinoGrupo(g, mover){
-    const set = C(), opciones = ordenar(S.sets, "sets").filter(s => !mover || s.id !== set.id);
+    const set = C(), opciones = ordenar(S.sets, "sets").filter(s => !s.archived && (!mover || s.id !== set.id));
     if(!opciones.length){ toast("No hay otro conjunto: creá uno en la pestaña Conjuntos"); return; }
     const d = dlg(`<h3>${mover ? "Mover" : "Copiar"} «${esc(g.name || "Sin nombre")}» a…</h3>
       <label>Conjunto<select id="dSet">${opciones.map(s => `<option value="${s.id}">${esc(s.name || "Sin nombre")}${s.id === set.id ? " (este mismo)" : ""}</option>`).join("")}</select></label>
@@ -909,6 +936,8 @@
       <button class="btn" type="button" data-m="cop">📋 Copiar a…</button>
       <button class="btn" type="button" data-m="mov">➡️ Mover a…</button>
       <button class="btn" type="button" data-m="sel">☑ Seleccionar varios</button>
+      <button class="btn" type="button" data-m="hid">${it.hidden ? "👁 Mostrar" : "🙈 Ocultar"}</button>
+      <button class="btn" type="button" data-m="arc">🗄 Archivar</button>
       <button class="btn danger" type="button" data-m="del">🗑 Borrar</button></div>
       <div class="acts"><button class="btn" data-x>Cerrar</button></div>`);
     d.querySelectorAll("[data-m]").forEach(b => b.onclick = () => {
@@ -917,6 +946,8 @@
       else if(m === "cop") dlgDestinoItems(l, false);
       else if(m === "mov") dlgDestinoItems(l, true);
       else if(m === "sel"){ selMode = true; sel.clear(); sel.add(it.id); d.close(); render(); }
+      else if(m === "hid"){ ocultar(it, !it.hidden); save(); d.close(); render(); toast(it.hidden ? "Ítem oculto y destildado" : "Ítem visible otra vez: tildalo para que participe"); }
+      else if(m === "arc"){ it.archived = true; sel.delete(it.id); save(); d.close(); render(); toast("Ítem archivado: está en 🗄 Archivados"); }
       else if(m === "del"){ borrarItems(l); save(); d.close(); render(); }
     });
   }
@@ -927,6 +958,8 @@
       <button class="btn" type="button" data-m="cop">📋 Copiar a otro conjunto…</button>
       <button class="btn" type="button" data-m="mov">➡️ Mover a otro conjunto…</button>
       <button class="btn" type="button" data-m="sel">☑ Seleccionar sus ítems</button>
+      <button class="btn" type="button" data-m="hid">${g.hidden ? "👁 Mostrar subconjunto" : "🙈 Ocultar subconjunto"}</button>
+      <button class="btn" type="button" data-m="arc">🗄 Archivar subconjunto</button>
       <button class="btn danger" type="button" data-m="del">🗑 Borrar subconjunto</button></div>
       <div class="acts"><button class="btn" data-x>Cerrar</button></div>`);
     d.querySelectorAll("[data-m]").forEach(b => b.onclick = () => {
@@ -934,9 +967,70 @@
       if(m === "dup"){ set.groups.splice(set.groups.indexOf(g) + 1, 0, clonGrupo(g, (g.name || "Subconjunto") + " (copia)")); save(); d.close(); render(); toast("Subconjunto duplicado"); }
       else if(m === "cop") dlgDestinoGrupo(g, false);
       else if(m === "mov") dlgDestinoGrupo(g, true);
-      else if(m === "sel"){ selMode = true; g.items.forEach(i => sel.add(i.id)); g.collapsed = false; d.close(); render(); }
+      else if(m === "sel"){ selMode = true; visibles(g.items).forEach(i => sel.add(i.id)); g.collapsed = false; d.close(); render(); }
+      else if(m === "hid"){ ocultar(g, !g.hidden); save(); d.close(); render(); toast(g.hidden ? "Subconjunto oculto y destildado" : "Subconjunto visible otra vez: tildalo para que participe"); }
+      else if(m === "arc"){ g.archived = true; g.items.forEach(i => sel.delete(i.id)); save(); d.close(); render(); toast("Subconjunto archivado: está en 🗄 Archivados"); }
       else if(m === "del") confirmar(`¿Borrar el subconjunto «${esc(g.name || "sin nombre")}» y sus ${g.items.length} ítems?`, "Borrar", () => {
         set.groups = set.groups.filter(x => x !== g); set.rules = set.rules.filter(r => !(r.tk === "group" && r.tv === g.id)); save(); render(); });
+    });
+  }
+
+  // ---------- Ocultar y archivar ----------
+  function ocultar(x, si){ x.hidden = si; if(si && !Array.isArray(x.groups)) x.active = false; }
+  function botonesOcArc(lvl){
+    const set = C();
+    const nOc = lvl === "sets" ? S.sets.filter(s => !s.archived).reduce((a, s) => a + (s.hidden ? 1 : 0) + s.groups.filter(g => !g.archived && g.hidden).length, 0)
+                               : set.groups.filter(g => !g.archived).reduce((a, g) => a + (g.hidden ? 1 : 0) + g.items.filter(i => !i.archived && i.hidden).length, 0);
+    const nAr = lvl === "sets" ? S.sets.filter(s => s.archived).length
+                               : set.groups.filter(g => g.archived).length + set.groups.filter(g => !g.archived).reduce((a, g) => a + g.items.filter(i => i.archived).length, 0);
+    return `<button class="btn sm ${S.verOcultos ? "on" : ""}" type="button" data-act="verOc" title="Mostrar u ocultar los elementos ocultos">👁 Ocultos (${nOc})</button>
+      <button class="btn sm" type="button" data-act="verArc" data-lvl="${lvl}">🗄 Archivados (${nAr})</button>`;
+  }
+  function menuSet(s){
+    const d = dlg(`<h3>${esc(s.name || "Conjunto sin nombre")}</h3><div class="menu">
+      <button class="btn" type="button" data-m="hid">${s.hidden ? "👁 Mostrar conjunto" : "🙈 Ocultar conjunto"}</button>
+      <button class="btn" type="button" data-m="arc">🗄 Archivar conjunto</button>
+      <button class="btn danger" type="button" data-m="del">🗑 Borrar conjunto</button></div>
+      <p class="mut sm">Un conjunto oculto no aparece en el selector ni se puede usar hasta mostrarlo de nuevo.</p>
+      <div class="acts"><button class="btn" data-x>Cerrar</button></div>`);
+    d.querySelectorAll("[data-m]").forEach(b => b.onclick = () => {
+      const m = b.dataset.m;
+      if(m === "hid"){ ocultar(s, !s.hidden); save(); d.close(); render(); toast(s.hidden ? "Conjunto oculto" : "Conjunto visible otra vez"); }
+      else if(m === "arc"){ s.archived = true; save(); d.close(); render(); toast("Conjunto archivado: está en 🗄 Archivados"); }
+      else if(m === "del") borrarSet(s);
+    });
+  }
+  function borrarSet(s, despues){
+    confirmar(`¿Borrar el conjunto «${esc(s.name || "sin nombre")}» con sus ${s.groups.length} subconjuntos, reglas e historial? No se puede deshacer.`, "Borrar", () => {
+      S.sets = S.sets.filter(x => x !== s);
+      if(!S.sets.length) S.sets.push(nuevoSet("Mi conjunto"));
+      save(); render(); if(despues) despues();
+    });
+  }
+  function dlgArchivados(lvl){
+    const set = C(), filas = [];
+    if(lvl === "sets") S.sets.filter(s => s.archived).forEach(s => filas.push(["set", s.id, s.name || "Sin nombre", `${pl(s.groups.length, "subconjunto", "subconjuntos")} · ${pl(itemsS(s), "ítem", "ítems")}`]));
+    else{
+      set.groups.filter(g => g.archived).forEach(g => filas.push(["group", g.id, g.name || "Sin nombre", "Subconjunto · " + pl(g.items.length, "ítem", "ítems")]));
+      set.groups.filter(g => !g.archived).forEach(g => g.items.filter(i => i.archived).forEach(i => filas.push(["item", i.id, i.name || "Sin nombre", "Ítem de «" + (g.name || "Sin nombre") + "»"])));
+    }
+    const d = dlg(`<h3>🗄 Archivados${lvl === "sets" ? "" : " de «" + esc(set.name || "Sin nombre") + "»"}</h3>
+      <p class="mut sm" style="margin-top:0">No participan del sorteo ni aparecen en las listas. Al desarchivarlos vuelven tal como estaban.</p>
+      <div>${filas.map(([k, id, n, x]) => `<div class="arow"><span class="sn"><b>${esc(n)}</b><br><span class="mut sm">${esc(x)}</span></span>
+        <button class="btn sm" type="button" data-u="${k}:${id}">↩ Desarchivar</button><button class="ic" type="button" data-b="${k}:${id}" title="Borrar definitivamente">🗑</button></div>`).join("")
+        || '<p class="mut">No hay nada archivado.</p>'}</div>
+      <div class="acts"><button class="btn" data-x>Cerrar</button></div>`);
+    const buscar = ref => { const [k, id] = ref.split(":");
+      if(k === "set") return {k, x: S.sets.find(s => s.id === id)};
+      if(k === "group") return {k, x: set.groups.find(g => g.id === id)};
+      for(const g of set.groups){ const i = g.items.find(it => it.id === id); if(i) return {k, x: i, g}; } return {k}; };
+    d.querySelectorAll("[data-u]").forEach(b => b.onclick = () => { const {x} = buscar(b.dataset.u); if(x){ x.archived = false; save(); render(); dlgArchivados(lvl); toast("Desarchivado"); } });
+    d.querySelectorAll("[data-b]").forEach(b => b.onclick = () => { const {k, x, g} = buscar(b.dataset.b); if(!x) return;
+      if(k === "set") return borrarSet(x, () => dlgArchivados(lvl));
+      confirmar(`¿Borrar definitivamente «${esc(x.name || "sin nombre")}»? No se puede deshacer.`, "Borrar", () => {
+        if(k === "group"){ set.groups = set.groups.filter(y => y !== x); set.rules = set.rules.filter(r => !(r.tk === "group" && r.tv === x.id)); }
+        else g.items = g.items.filter(y => y !== x);
+        save(); render(); dlgArchivados(lvl); });
     });
   }
 
@@ -1074,18 +1168,19 @@
     const sets = [], porNombre = new Map(), avisos = [], conCfg = new Set(), conReglas = new Set();
     const getSet = n => { n = n || "Importado"; const k = norm(n); if(!porNombre.has(k)){ const s = nuevoSet(n); sets.push(s); porNombre.set(k, s); } return porNombre.get(k); };
     const getG = (s, n, o) => { let g = s.groups.find(x => norm(x.name) === norm(n));
-      if(!g){ g = {id: uid(), name: n, active: bool(col(o, "Subconjunto activo")), weight: num(col(o, "Peso subconjunto"), 1), items: []}; s.groups.push(g); } return g; };
+      if(!g){ g = {id: uid(), name: n, active: bool(col(o, "Subconjunto activo")), weight: num(col(o, "Peso subconjunto"), 1), items: [],
+        hidden: bool(col(o, "Subconjunto oculto"), false), archived: bool(col(o, "Subconjunto archivado"), false)}; if(g.hidden) g.active = false; s.groups.push(g); } return g; };
     for(const o of filI){
       const s = getSet(col(o, "Conjunto")), gn = col(o, "Subconjunto"), iname = col(o, "Ítem", "Item");
       if(!gn && !iname) continue;
       const g = getG(s, gn || "General", o);
       if(iname){ const it = mkI(iname, num(col(o, "Peso"), 1), col(o, "Etiquetas").split(",").map(t => t.trim()).filter(Boolean));
-        it.active = bool(col(o, "Activo")); it.hits = Math.max(0, parseInt(col(o, "Veces sorteado")) || 0); g.items.push(it); }
+        it.active = bool(col(o, "Activo")); it.hidden = bool(col(o, "Oculto"), false); it.archived = bool(col(o, "Archivado"), false); if(it.hidden) it.active = false; it.hits = Math.max(0, parseInt(col(o, "Veces sorteado")) || 0); g.items.push(it); }
     }
     for(const o of filasDe(hoja("Conjuntos"))){
       const n = col(o, "Conjunto"); if(!n) continue; const s = getSet(n); conCfg.add(s);
       s.cfg = {count: Math.max(1, parseInt(col(o, "Cantidad")) || 1), mode: norm(col(o, "Sacar")).includes("cada") ? "grupo" : "global", replace: bool(col(o, "Repetidos"), false)};
-      s.resetAt = fechaDe(col(o, "Último reinicio"));
+      s.resetAt = fechaDe(col(o, "Último reinicio")); s.hidden = bool(col(o, "Oculto"), false); s.archived = bool(col(o, "Archivado"), false);
     }
     for(const o of filasDe(hoja("Reglas"))){
       const s = getSet(col(o, "Conjunto")); conReglas.add(s);
@@ -1119,16 +1214,16 @@
   }
   const hoyTxt = () => { const d = new Date(); return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`; };
   function exportarXlsx(){
-    const items = [["Conjunto", "Subconjunto", "Ítem", "Peso", "Etiquetas", "Activo", "Veces sorteado", "Peso subconjunto", "Subconjunto activo"]];
-    const conj = [["Conjunto", "Cantidad", "Sacar", "Repetidos", "Último reinicio"]];
+    const items = [["Conjunto", "Subconjunto", "Ítem", "Peso", "Etiquetas", "Activo", "Veces sorteado", "Peso subconjunto", "Subconjunto activo", "Oculto", "Archivado", "Subconjunto oculto", "Subconjunto archivado"]];
+    const conj = [["Conjunto", "Cantidad", "Sacar", "Repetidos", "Último reinicio", "Oculto", "Archivado"]];
     const reglas = [["Conjunto", "Activa", "Acción", "Factor", "Aplica a", "Valor", "Rondas"]];
     const hist = [["Conjunto", "Ronda", "Fecha", "Modo", "Subconjunto", "Ítem"]];
     for(const s of S.sets){
-      conj.push([s.name, Math.max(1, parseInt(s.cfg.count) || 1), s.cfg.mode === "grupo" ? "De cada subconjunto" : "Del total", SI(s.cfg.replace), fechaTxt(s.resetAt)]);
+      conj.push([s.name, Math.max(1, parseInt(s.cfg.count) || 1), s.cfg.mode === "grupo" ? "De cada subconjunto" : "Del total", SI(s.cfg.replace), fechaTxt(s.resetAt), SI(s.hidden), SI(s.archived)]);
       if(!s.groups.length) items.push([s.name]);
       for(const g of s.groups){
-        if(!g.items.length) items.push([s.name, g.name, "", "", "", "", "", num(g.weight), SI(g.active)]);
-        for(const it of g.items) items.push([s.name, g.name, it.name, num(it.weight), (it.tags || []).join(", "), SI(it.active), hitsI(it), num(g.weight), SI(g.active)]);
+        if(!g.items.length) items.push([s.name, g.name, "", "", "", "", "", num(g.weight), SI(g.active), "", "", SI(g.hidden), SI(g.archived)]);
+        for(const it of g.items) items.push([s.name, g.name, it.name, num(it.weight), (it.tags || []).join(", "), SI(it.active), hitsI(it), num(g.weight), SI(g.active), SI(it.hidden), SI(it.archived), SI(g.hidden), SI(g.archived)]);
       }
       for(const r of s.rules){
         const v = r.tk === "group" ? ((s.groups.find(g => g.id === r.tv) || {}).name || "") : (r.tk === "tag" || r.tk === "text") ? r.tv : "";
@@ -1148,16 +1243,16 @@
       for(const ng of ns.groups){
         const g = s.groups.find(x => norm(x.name) === norm(ng.name));
         if(!g){ ng.items.forEach(i => i.hits = 0); s.groups.push(ng); gmap[ng.id] = ng.id; continue; }
-        gmap[ng.id] = g.id; g.weight = ng.weight; g.active = ng.active;
+        gmap[ng.id] = g.id; g.weight = ng.weight; g.active = ng.active; g.hidden = !!ng.hidden; g.archived = !!ng.archived;
         for(const ni of ng.items){
           const it = g.items.find(x => norm(x.name) === norm(ni.name));
-          if(it){ it.weight = ni.weight; it.tags = ni.tags; it.active = ni.active; } else { ni.hits = 0; g.items.push(ni); }
+          if(it){ it.weight = ni.weight; it.tags = ni.tags; it.active = ni.active; it.hidden = !!ni.hidden; it.archived = !!ni.archived; } else { ni.hits = 0; g.items.push(ni); }
         }
         if(quitar) g.items = g.items.filter(x => ng.items.some(ni => norm(ni.name) === norm(x.name)));
       }
       if(quitar) s.groups = s.groups.filter(x => ns.groups.some(ng => norm(ng.name) === norm(x.name)));
       if(res.conReglas.has(ns)) s.rules = ns.rules.map(r => ({...r, tv: r.tk === "group" ? (gmap[r.tv] || r.tv) : r.tv}));
-      if(res.conCfg.has(ns)) s.cfg = ns.cfg;
+      if(res.conCfg.has(ns)){ s.cfg = ns.cfg; s.hidden = !!ns.hidden; s.archived = !!ns.archived; }
       s.rules = s.rules.filter(r => r.tk !== "group" || s.groups.some(g => g.id === r.tv));
     }
   }
