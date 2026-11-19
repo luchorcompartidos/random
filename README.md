@@ -17,7 +17,10 @@ App web para hacer **selecciones aleatorias** a partir de subconjuntos de ítems
 - **Historial y contador:** guarda cada ronda y alimenta las reglas de historial. El contador 🎲 suma las veces que salió cada ítem, se puede reiniciar y después restaurar.
 - **Orden:** conjuntos, subconjuntos e ítems se pueden ordenar a mano (arrastrando desde ⠿ o con ↑↓), por nombre, por peso, por cantidad de ítems, con los activos primero o por más o menos sorteados. Hay botones para contraer y expandir todo.
 - **Tema:** Sistema, Claro u Oscuro, desde el menú ⋯.
-- **Datos:** se guardan en el navegador. Desde el menú ⋯ se pueden exportar e importar en `.json`.
+- **Reiniciar sorteo:** deja el conjunto como recién creado para el sorteo (las reglas de historial empiezan de cero y el contador vuelve a 0) sin borrar el historial. Se puede deshacer.
+- **Copiar y mover:** desde ⋯ en cada ítem o subconjunto se puede duplicar, copiar o mover a otro subconjunto o conjunto. Con «☑ Seleccionar» se trabaja con varios ítems a la vez.
+- **Planilla:** exportar e importar en Excel (.xlsx, con hojas Ítems, Conjuntos, Reglas e Historial) o CSV, y leer una Google Sheet publicada en la web (solo lectura). Al importar se puede actualizar por nombre, agregar como conjuntos nuevos o reemplazar todo. Lectura y escritura de .xlsx sin librerías externas.
+- **Datos:** se guardan en el navegador. Desde el menú ⋯ hay respaldo completo en `.json`.
 
 El peso final de cada ítem es: peso del ítem × peso del subconjunto × reglas de peso. El sorteo sin repetidos usa el método de Efraimidis–Spirakis con números aleatorios de `crypto.getRandomValues`.
 
