@@ -6,6 +6,7 @@ App web para hacer **selecciones aleatorias** a partir de subconjuntos de ítems
 
 ## Cómo funciona
 
+- **Conjuntos:** el nivel superior. Cada conjunto es independiente y tiene sus propios subconjuntos, reglas, configuración de sorteo, historial y contador. Un sorteo usa solo el conjunto en uso: los conjuntos nunca se mezclan.
 - **Subconjuntos:** grupos de ítems (por ejemplo "Cenas" o "Planes del finde"). Cada ítem tiene un **peso** (×1 por defecto) y **etiquetas** opcionales. Los subconjuntos también tienen peso, y tanto los ítems como los subconjuntos se pueden activar o desactivar.
 - **Reglas** (se aplican antes de cada ronda):
   - **Excluir**: deja afuera los ítems alcanzados.
@@ -13,7 +14,9 @@ App web para hacer **selecciones aleatorias** a partir de subconjuntos de ítems
   - **Cambiar el peso**: multiplica las chances (×2 = el doble, ×0,5 = la mitad, ×0 = nunca).
   - **A quién aplican**: una etiqueta, un subconjunto, los ítems cuyo nombre contiene un texto, los que salieron en las últimas N rondas o los que nunca salieron.
 - **Sorteo:** elegís cuántos ítems sacar, del total o de cada subconjunto, con o sin repetidos. Antes de sortear, la app muestra las **chances** de cada ítem y la lista de excluidos con el motivo.
-- **Historial:** guarda cada ronda y alimenta las reglas de historial.
+- **Historial y contador:** guarda cada ronda y alimenta las reglas de historial. El contador 🎲 suma las veces que salió cada ítem, se puede reiniciar y después restaurar.
+- **Orden:** conjuntos, subconjuntos e ítems se pueden ordenar a mano (arrastrando desde ⠿ o con ↑↓), por nombre, por peso, por cantidad de ítems, con los activos primero o por más o menos sorteados. Hay botones para contraer y expandir todo.
+- **Tema:** Sistema, Claro u Oscuro, desde el menú ⋯.
 - **Datos:** se guardan en el navegador. Desde el menú ⋯ se pueden exportar e importar en `.json`.
 
 El peso final de cada ítem es: peso del ítem × peso del subconjunto × reglas de peso. El sorteo sin repetidos usa el método de Efraimidis–Spirakis con números aleatorios de `crypto.getRandomValues`.
